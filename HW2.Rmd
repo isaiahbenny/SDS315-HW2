@@ -1,0 +1,220 @@
+---
+title: "Homework 2"
+author:
+- Isaiah Benny
+- "EID: ieb357"
+date: "2024-01-30"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r global_options, echo=FALSE}
+knitr::opts_chunk$set(fig.height=3, fig.width=5, warning=FALSE, tidy=TRUE, tidy.opts=list(width.cutoff=60), echo = FALSE, message = FALSE, fig.align = 'center')
+```
+
+```{r, include=F}
+library(tidyverse)
+library(knitr)
+```
+
+# [Github](https://github.com/isaiahbenny/SDS315-HW2)
+
+------------------------------------------------------------------------
+
+# Problem 1
+
+## Part A
+
+```{r}
+#Problem 1
+
+prof <- read.csv("profs.csv")
+
+#A
+#histogram of evaluation scores
+ggplot(prof) + geom_histogram(aes(x=eval), binwidth = .25, color = "black", fill = "lightblue", boundary=2) + xlab("Course Evaluation Score") + ylab("Frequency") + ggtitle("Histogram of Course Evaluation Scores")
+```
+
+The distribution of course evaluations scores appears to be positively skewed with a median of `r median(prof$eval)` points. The interquartile range of this distribution is `r IQR(prof$eval)` points, and no professor in the sample has received an average rating below `r min(prof$eval)` points. Additionally, this histogram seems to show that most professors don't receive "low" scores, in that only a small proportion of this sample of professors had average ratings below a 3.
+
+\newpage
+## Part B
+
+```{r,fig.width=6.5}
+#B
+#boxplot of evaluation score by english background
+ggplot(prof) + geom_boxplot(aes(x=eval, y=native)) + ylab("Native English Speaker") + xlab("Course Evaluation Score") + ggtitle("Boxplots of Course Evaluation Scores by Professor's English Background")
+```
+
+The boxplot above indicates that there may be a difference in course evaluations based on whether the professor is a native english speaker. Professors who are native speakers have a median average rating of `r median(prof[prof$native=="yes",6])` points, while non-native speakers have a median average rating of `r median(prof[prof$native=="no",6])` points. The course evaluations for professors who are native English speakers and non-native speakers have the same IQR of `r IQR(prof[prof$native=="yes",6])` points.
+
+\newpage
+## Part C
+
+```{r, fig.width=5.75, fig.height=4}
+#C
+#Histograms of course eval by gender
+ggplot(prof) + geom_histogram(aes(x=eval, y=after_stat(density)), binwidth = .25, color = "black", fill = "lightblue", boundary=2) + xlab("Course Evaluation Score") + ylab("Density") + ggtitle("Histogram of Course Evaluation Scores by Professor's Gender") + facet_wrap(~gender, nrow = 2)
+```
+
+Since there are `r sum(prof$gender == "female")` female professors and `r sum(prof$gender == "male")` male professors, the histograms of their course evaluation scores have been normalized. This helps illustrate that male professors generally have slightly higher average course evaluations, with a median of `r median(prof[prof$gender=="male",6])` points and an IQR of `r IQR(prof[prof$gender=="male",6])` points, compared to female professors' median of `r median(prof[prof$gender=="female",6])` points and IQR of `r IQR(prof[prof$gender=="female",6])` points.
+
+\newpage
+## Part D
+
+```{r, fig.width=5}
+#D
+#Scatterplot of beauty vs course eval
+ggplot(prof) + geom_point(aes(x=beauty, y=eval)) +
+  xlab("Beauty Score") + ylab("Course Evaluation Score") + ggtitle("Physical Attractiveness Versus Course Evaluations")
+```
+
+Judging from the visual appearance of the scatterplot, there does not seem to be a strong association between a professor's beauty score and their average course evaluation score. This is confirmed by the correlation coefficient of these two variables, which is `r cor(prof$beauty, prof$eval) %>% round(2)`, indicating a weak positive correlation.
+
+\newpage
+
+# Problem 2
+
+```{r}
+#Problem 2
+bikeshare <- read.csv("bikeshare.csv")
+```
+
+## Plot A
+```{r, fig.width=5.1}
+#Plot A
+
+#get mean rentals for each hour
+bikeshare_by_hr <- group_by(bikeshare, hr) %>% summarize(mean_rentals = mean(total))
+
+#line graph of mean rentals for each hour of the day
+ggplot(bikeshare_by_hr) + geom_line(aes(x=hr, y=mean_rentals)) + xlab("Hour of the Day") +
+  ylab("Average Bike Rentals") + ggtitle("Average Hourly Bike Rentals Across all Hours of the Day")
+```
+
+This graph shows the relationship between the hour of the day (0-23) and the average number of bike rentals for that given hour. From this graph, we can ascertain that, on average, bike rentals tend to peak at around 8 AM and 5 PM. This could be because these hours generally coincide with the start and end times of many people's jobs. Additionally, there seems to be a moderate amount of bike rentals during the middle of the day.
+
+\newpage
+
+## Plot B
+```{r}
+#Plot B
+
+#get mean rentals for each hour, separate based on workingday
+bikeshare_hr_workingday <- group_by(bikeshare, hr, workingday) %>% summarize(mean_rentals = mean(total))
+
+#facet labels
+workingday_names <- c(`0` = "Not a Working Day", `1` = "Working Day")
+
+#line graphs
+ggplot(bikeshare_hr_workingday) + geom_line(aes(x=hr, y=mean_rentals)) + facet_wrap(~workingday, labeller = as_labeller(workingday_names)) + xlab("Hour of the Day") + ylab("Average Bike Rentals") + ggtitle("Average Bike Rentals by Hour of the Day for\n Working and Non-Working Days")
+```
+
+These line graphs represent the same data as the previous graph, but they are split according to whether the day is a working day. When it is not a working day, we can see that there are no longer any peaks in bike rentals at 8 AM or 5 PM. Instead, there is a less steep peak during the middle of the day. As for working days, the peaks at 8 AM and 5 PM have become more exaggerated. This gives further plausibility to the idea that the peaks at 8 AM and 5 PM are caused by those going to work.
+
+\newpage
+## Plot C
+```{r, fig.width=5}
+#Plot C
+
+nine_am_bikeshare <- filter(bikeshare, hr==9)
+
+#get mean rentals for 9 AM ridership based on weathersit and workingday
+nine_am_bikeshare_weathersit <- nine_am_bikeshare %>% 
+  group_by(weathersit, workingday) %>% 
+  summarize(mean_rentals = mean(total))
+
+ggplot(nine_am_bikeshare_weathersit) + geom_col(aes(x=weathersit, y=mean_rentals)) + facet_wrap(~workingday, labeller = as_labeller(workingday_names)) + 
+  xlab("Weather Situation") + ylab("Mean Bike Rentals") + 
+  ggtitle("Average Ridership at 9 AM by Weather Situation")
+```
+
+These bar graphs show the average bike rentals for different weather situations. The data is also split based on if the day is a working day. A weather code of 1 indicates generally clear conditions, 2 indicates mist with some clouds, and 3 indicates light snow, light rain, or thunderstorms. These two graphs show that unfavorable weather does have some negative association with bike rentals. This makes sense, as it is generally less safe to ride a bike when there is rain or snow. However, this negative association is less pronounced on workdays, especially when comparing weather codes 1 and 2. This could reflect that a decent number of people rely on renting a bike to get to work, regardless of the weather.
+
+\newpage
+
+# Problem 3
+## Plot 1
+```{r, fig.height=4, fig.width=6.66}
+#Problem 3.1
+capmetro_UT <- read.csv("capmetro_UT.csv")
+
+# Recode the categorical variables in sensible, rather than alphabetical, order
+capmetro_UT = mutate(capmetro_UT,
+                     day_of_week = factor(day_of_week,
+                                          levels=c("Mon", "Tue", "Wed","Thu", "Fri", "Sat", "Sun")),
+                     month = factor(month,
+                                    levels=c("Sep", "Oct","Nov")))
+
+
+#Get mean boardings and separate groups by hour, day, and month
+capmetro_UT_hdm <- capmetro_UT %>% group_by(hour_of_day,day_of_week,month) %>% summarize(mean_boarding = mean(boarding))
+
+ggplot(capmetro_UT_hdm) + geom_line(aes(x=hour_of_day, y=mean_boarding, col=month)) + facet_wrap(~day_of_week) + ggtitle("Average Boardings by Hour, Day, and Month") + xlab("Hour of the Day") + ylab("Average Boardings") + guides(col=guide_legend(title="Month"))
+```
+
+This figure shows 7 different line graphs (one for each day of the week) and displays the relationship between the hour of the day and the average boardings on any Capital Metro bus at the UT campus. There are 3 lines on each graph showing the differences between the months of September, October, and November. Among weekdays, the hour of peak boardings seems to be broadly similar, since all 3 lines for each weekday peak at around 17 hours (5 PM). However, for the weekends, there is no distinct peak throughout the day. One reason why there might be a lower amount of average boardings on Mondays in September is because Labor Day occurs on a Monday in September. During Labor Day, there are no classes held, meaning that there would be a decrease in average boardings. Similarly, one reason why there might be a lower amount of boardings on Wednesdays, Thursdays, and Fridays in November could be because of Thanksgiving break. In past years, UT started Thanksgiving break on the second half of Thanksgiving week, which would cause a decrease in boardings due to the lack of classes being held.
+
+\newpage
+## Plot 2
+```{r, fig.height=4, fig.width=6.66}
+#Problem 3.2
+#Temperature vs. boarding for each hour of day and weekend status 
+ggplot(capmetro_UT) + geom_point(aes(x=temperature, y=boarding, col=weekend)) + facet_wrap(~hour_of_day) + xlab("Temperature") + ylab("Boardings") + ggtitle("Temperature Versus Boardings Across Hours of the Day")
+```
+
+These scatterplots show the relationship between temperature and the number of boardings for each hour of the day. When holding the hour of the day and weekend status to be constant, it appears as if temperature does not have a noticable effect on the number of UT students riding the bus. For any given hour of the day and weekend status, an increase in temperature does not seem to show an increase in boardings. Instead, as the temperature increases, the number of boardings seems to stay the same.
+
+\newpage
+
+# Problem 4
+## Part A
+```{r}
+#Problem 4
+
+#Part A
+billboard <- read.csv("billboard.csv")
+
+#count the maximum number of weeks a song was on the chart for each song
+billboard_count <- billboard %>% group_by(performer, song) %>% summarise(count = max(weeks_on_chart))
+
+#Get the top 10
+billboard_top10 <- arrange(billboard_count, desc(count))[1:10,]
+
+kable(billboard_top10, col.names = c("Performer", "Song", "Number of Weeks in Billboard Top 100"))
+```
+
+The table above shows the top 10 most popular songs since 1958. Popularity is measured by the total number of weeks that a song spent on the Billboard Top 100.
+
+\newpage
+## Part B
+```{r, fig.width=5}
+#Part B
+#Get unique songs
+songs <- billboard %>% filter(year!=1958, year!=2021) %>% select(song_id, year) %>% unique()
+
+#Get the count of unique songs by year
+billboard_diversity <- group_by(songs, year) %>% summarize(count = n())
+
+ggplot(billboard_diversity) + geom_line(aes(x=year, y=count)) + xlab("Year") +
+  ylab("Number of Unique Songs") + ggtitle("Musical Diversity in the Billboard Top 100 Over Time")
+```
+
+This graph shows how the number of unique songs that appear on the Billboard Top 100 changed over time. From the late 1960's to the early 2000's, there appears to be a noticable decrease in the "musical diversity" of the Billboard Top 100. This trend seems to reverse from the early 2000's onwards, but there is one sharp decrease in diversity around 2011.
+
+\newpage
+## Part C
+```{r, fig.height=4}
+#Part C
+
+#Add one to a performers ten_week_hits count if they have a song on the chart for more than 10 weeks
+ten_wk_hits <- billboard_count %>% group_by(performer) %>% summarise(ten_week_hits = sum(count>=10)) %>% arrange(desc(ten_week_hits))
+
+#Get the top 19 artists
+top_19 <- ten_wk_hits[1:19,]
+
+ggplot(top_19) + geom_col(aes(x=fct_reorder(performer, ten_week_hits), y=ten_week_hits)) + 
+  coord_flip() + xlab("Performer") + ylab("Number of Ten-Week Hits") + ggtitle("Top 19 Ten-Week Hitters")
+```
+This bar graph shows the 19 artists who have had at least 30 songs on the Billboard Top 100 that stayed there for at least 10 weeks.
